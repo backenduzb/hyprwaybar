@@ -1,3 +1,5 @@
+use crate::config::settings::BAR_HEIGHT;
+
 use wayland_client::{
     protocol::{wl_compositor, wl_registry, wl_surface},
     Connection, Dispatch, QueueHandle, globals::{registry_queue_init, GlobalListContents, BindError},
@@ -77,9 +79,8 @@ pub fn run() {
     );
 
     layer_surface.set_anchor(Anchor::Top | Anchor::Left | Anchor::Right);
-    let height = 10u32;
-    layer_surface.set_size(0, height);
-    layer_surface.set_exclusive_zone(height as i32);
+    layer_surface.set_size(0, BAR_HEIGHT);
+    layer_surface.set_exclusive_zone(BAR_HEIGHT as i32);
     
     surface.commit();
 
