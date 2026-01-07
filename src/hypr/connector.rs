@@ -1,0 +1,117 @@
+use crate::config::settings::BAR_HEIGHT;
+
+use wayland_client::{
+    protocol::{wl_compositor, wl_registry, wl_surface},
+    Connection, Dispatch, QueueHandle, globals::{registry_queue_init, GlobalListContents, BindError},
+};
+use wayland_protocols_wlr::layer_shell::v1::client::{
+    zwlr_layer_shell_v1::{self, ZwlrLayerShellV1},
+    zwlr_layer_surface_v1::{self, Anchor, ZwlrLayerSurfaceV1},
+};
+
+#[derive(Default)]
+struct State;
+
+impl Dispatch<wl_registry::WlRegistry, GlobalListContents> for State {
+    fn event(
+        _: &mut Self,
+        _: &wl_registry::WlRegistry,
+        _: wl_registry::Event,
+        _: &GlobalListContents,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+    }
+}
+
+impl Dispatch<wl_compositor::WlCompositor, ()> for State {
+    fn event(_: &mut Self, _: &wl_compositor::WlCompositor, _: wl_compositor::Event, _: &(), _: &Connection, _: &QueueHandle<Self>) {}
+}
+
+impl Dispatch<wl_surface::WlSurface, ()> for State {
+    fn event(_: &mut Self, _: &wl_surface::WlSurface, _: wl_surface::Event, _: &(), _: &Connection, _: &QueueHandle<Self>) {}
+}
+
+impl Dispatch<ZwlrLayerShellV1, ()> for State {
+    fn event(_: &mut Self, _: &ZwlrLayerShellV1, _: zwlr_layer_shell_v1::Event, _: &(), _: &Connection, _: &QueueHandle<Self>) {}
+}
+
+impl Dispatch<ZwlrLayerSurfaceV1, ()> for State {
+    fn event(
+        state: &mut Self,
+        layer_surface: &ZwlrLayerSurfaceV1,
+        event: zwlr_layer_surface_v1::Event,
+        _: &(),
+        _: &Connection,
+        qh: &QueueHandle<Self>,
+    ) {
+        if let zwlr_layer_surface_v1::Event::Configure { serial, width, height } = event {
+            layer_surface.ack_configure(serial);
+        }
+    }
+}
+
+pub fn run_connector() {
+    use cairo::{Context, Format, ImageSurface};
+    use std::convert::TryInto;
+
+    let conn = Connection::connect_to_env().expect("Wayland ga ulanish muvaffaqiyatsiz");
+
+    let (globals, mut event_queue) = registry_queue_init::<State>(&conn)
+        .expect("Registry ni ishga tushirib bo'lmadi");
+
+    let qh = event_queue.handle();
+
+    let compositor: wl_compositor::WlCompositor = globals
+        .bind::<wl_compositor::WlCompositor, _, _>(&qh, 4..=6, ())
+        .expect("wl_compositor topilmadi");
+
+    let layer_shell: ZwlrLayerShellV1 = globals
+        .bind::<ZwlrLayerShellV1, _, _>(&qh, 1..=4, ())
+        .expect("zwlr_layer_shell_v1 topilmadi");
+
+    let surface = compositor.create_surface(&qh, ());
+
+    let layer_surface = layer_shell.get_layer_surface(
+        &surface,
+        None,
+        zwlr_layer_shell_v1::Layer::Top,
+        "rust-bar".into(),
+        &qh,
+        (),
+    );
+
+    layer_surface.set_anchor(Anchor::Top | Anchor::Left | Anchor::Right);
+    layer_surface.set_size(0, BAR_HEIGHT);
+    layer_surface.set_exclusive_zone(BAR_HEIGHT as i32);
+    surface.commit();
+
+    // Cairo surface yaratish (width va height i32 bo'lishi kerak)
+    let width: i32 = 1920;
+    let height: i32 = BAR_HEIGHT.try_into().unwrap();
+
+    let surface_cairo = ImageSurface::create(Format::ARgb32, width, height)
+        .expect("Cairo surface yaratilmadi");
+    let cr = Context::new(&surface_cairo).expect("Cairo context yaratilmadi");
+
+    // Fon
+    cr.set_source_rgb(0.0, 0.0, 0.0);
+    cr.paint().expect("Cairo paint xatosi");
+
+    // Text
+    cr.set_source_rgb(0.0, 1.0, 0.0); // yashil
+    cr.select_font_face("Sans", cairo::FontSlant::Normal, cairo::FontWeight::Bold);
+    cr.set_font_size(20.0);
+    cr.move_to(10.0, 22.0);
+    cr.show_text("Salom, bu Rust Wayland bar!").expect("Cairo show_text xatosi");
+
+    surface_cairo.flush();
+
+    // Wayland event loop
+    loop {
+        if let Err(e) = event_queue.blocking_dispatch(&mut State::default()) {
+            eprintln!("Dispatch xatosi: {e:?}");
+            break;
+        }
+    }
+}
