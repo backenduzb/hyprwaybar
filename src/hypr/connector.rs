@@ -1,7 +1,9 @@
 use crate::config::settings::BAR_HEIGHT;
+use crate::config::settings::BACKGROUND_COLOR;
 use wayland_client::protocol::wl_shm_pool;
 use std::ffi::CString;
 use std::os::fd::BorrowedFd;
+use crate::widgets::label;
 
 use std::{
     fs::File,
@@ -178,19 +180,20 @@ pub fn run_connector() {
     };
 
     let cr = Context::new(&cairo_surface).unwrap();
+    label::rounded_rect(&cr, 5.0, 0.0, (state.width - 10) as f64, (state.height) as f64, 8.0);
+    let (red, green, blue, alpha) = BACKGROUND_COLOR;
+    cr.set_source_rgba(red, green, blue, alpha);
+    cr.fill().unwrap();
 
-    cr.set_source_rgb(0.0, 0.0, 0.0);
-    cr.paint().unwrap();
-
-    cr.set_source_rgb(0.0, 1.0, 0.0);
-    cr.select_font_face(
-        "Sans",
-        cairo::FontSlant::Normal,
-        cairo::FontWeight::Bold,
-    );
-    cr.set_font_size(20.0);
-    cr.move_to(10.0, 24.0);
-    cr.show_text("Salom, Rust Wayland bar!").unwrap();
+    // cr.set_source_rgb(0.0, 1.0, 0.0);
+    // cr.select_font_face(
+    //     "Sans",
+    //     cairo::FontSlant::Normal,
+    //     cairo::FontWeight::Bold,
+    // );
+    // cr.move_to(20.0, 24.0);
+    // cr.set_font_size(14.0);
+    // cr.show_text("Hyprbar").unwrap();
 
     cairo_surface.flush();
 

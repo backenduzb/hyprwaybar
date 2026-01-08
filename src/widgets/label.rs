@@ -1,22 +1,8 @@
-pub struct Label {
-    pub text: String,
-    pub background_color: Option<(f64, f64, f64, f64)>, // RGBA
-}
-
-impl Label {
-    pub fn new(text: impl Into<String>) -> Self {
-        Self { 
-            text: text.into(),
-            background_color: None,
-        }
-    }
-
-    pub fn set_background(&mut self, r: f64, g: f64, b: f64, a: f64) {
-        self.background_color = Some((r, g, b, a));
-    }
-
-    pub fn draw(&self) {
-        println!("Label: {} | Background: {:?}", self.text, self.background_color);
-        // Keyinchalik bu yerda cairo orqali chizish logikasi bo'ladi
-    }
+pub fn rounded_rect(cr: &cairo::Context, x: f64, y: f64, w: f64, h: f64, r: f64) {
+    cr.new_sub_path();
+    cr.arc(x + w - r, y + r, r, -90.0f64.to_radians(), 0.0);      
+    cr.arc(x + w - r, y + h - r, r, 0.0, 90.0f64.to_radians());     
+    cr.arc(x + r, y + h - r, r, 90.0f64.to_radians(), 180.0f64.to_radians());       
+    cr.arc(x + r, y + r, r, 180.0f64.to_radians(), 270.0f64.to_radians());         
+    cr.close_path();
 }
