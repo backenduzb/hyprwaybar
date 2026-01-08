@@ -1,9 +1,11 @@
-use crate::config::settings::BAR_HEIGHT;
 use crate::config::settings::BACKGROUND_COLOR;
-use wayland_client::protocol::wl_shm_pool;
+use crate::config::settings::BAR_HEIGHT;
+use crate::utils::label_drawer;
+use crate::utils::img_drawer;
+use image::{imageops::FilterType, GenericImageView};
 use std::ffi::CString;
 use std::os::fd::BorrowedFd;
-use crate::widgets::label;
+use wayland_client::protocol::wl_shm_pool;
 
 use std::{
     fs::File,
@@ -12,11 +14,9 @@ use std::{
 };
 
 use wayland_client::{
-    protocol::{
-        wl_buffer, wl_compositor, wl_registry, wl_shm, wl_surface,
-    },
-    Connection, Dispatch, QueueHandle,
     globals::{registry_queue_init, GlobalListContents},
+    protocol::{wl_buffer, wl_compositor, wl_registry, wl_shm, wl_surface},
+    Connection, Dispatch, QueueHandle,
 };
 
 use wayland_protocols_wlr::layer_shell::v1::client::{
@@ -41,7 +41,8 @@ impl Dispatch<wl_shm_pool::WlShmPool, ()> for State {
         _: &(),
         _: &Connection,
         _: &QueueHandle<Self>,
-    ) {}
+    ) {
+    }
 }
 
 impl Dispatch<wl_registry::WlRegistry, GlobalListContents> for State {
@@ -52,27 +53,68 @@ impl Dispatch<wl_registry::WlRegistry, GlobalListContents> for State {
         _: &GlobalListContents,
         _: &Connection,
         _: &QueueHandle<Self>,
-    ) {}
+    ) {
+    }
 }
 
 impl Dispatch<wl_compositor::WlCompositor, ()> for State {
-    fn event(_: &mut Self, _: &wl_compositor::WlCompositor, _: wl_compositor::Event, _: &(), _: &Connection, _: &QueueHandle<Self>) {}
+    fn event(
+        _: &mut Self,
+        _: &wl_compositor::WlCompositor,
+        _: wl_compositor::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+    }
 }
 
 impl Dispatch<wl_surface::WlSurface, ()> for State {
-    fn event(_: &mut Self, _: &wl_surface::WlSurface, _: wl_surface::Event, _: &(), _: &Connection, _: &QueueHandle<Self>) {}
+    fn event(
+        _: &mut Self,
+        _: &wl_surface::WlSurface,
+        _: wl_surface::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+    }
 }
 
 impl Dispatch<wl_shm::WlShm, ()> for State {
-    fn event(_: &mut Self, _: &wl_shm::WlShm, _: wl_shm::Event, _: &(), _: &Connection, _: &QueueHandle<Self>) {}
+    fn event(
+        _: &mut Self,
+        _: &wl_shm::WlShm,
+        _: wl_shm::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+    }
 }
 
 impl Dispatch<wl_buffer::WlBuffer, ()> for State {
-    fn event(_: &mut Self, _: &wl_buffer::WlBuffer, _: wl_buffer::Event, _: &(), _: &Connection, _: &QueueHandle<Self>) {}
+    fn event(
+        _: &mut Self,
+        _: &wl_buffer::WlBuffer,
+        _: wl_buffer::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+    }
 }
 
 impl Dispatch<ZwlrLayerShellV1, ()> for State {
-    fn event(_: &mut Self, _: &ZwlrLayerShellV1, _: zwlr_layer_shell_v1::Event, _: &(), _: &Connection, _: &QueueHandle<Self>) {}
+    fn event(
+        _: &mut Self,
+        _: &ZwlrLayerShellV1,
+        _: zwlr_layer_shell_v1::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+    }
 }
 
 impl Dispatch<ZwlrLayerSurfaceV1, ()> for State {
@@ -84,7 +126,12 @@ impl Dispatch<ZwlrLayerSurfaceV1, ()> for State {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-        if let zwlr_layer_surface_v1::Event::Configure { serial, width, height } = event {
+        if let zwlr_layer_surface_v1::Event::Configure {
+            serial,
+            width,
+            height,
+        } = event
+        {
             layer_surface.ack_configure(serial);
             state.width = if width == 0 { 1920 } else { width as i32 };
             state.height = BAR_HEIGHT as i32;
@@ -98,14 +145,11 @@ pub fn run_connector() {
     let (globals, mut event_queue) = registry_queue_init::<State>(&conn).unwrap();
     let qh = event_queue.handle();
 
-    let compositor: wl_compositor::WlCompositor =
-        globals.bind(&qh, 4..=6, ()).unwrap();
+    let compositor: wl_compositor::WlCompositor = globals.bind(&qh, 4..=6, ()).unwrap();
 
-    let shm: wl_shm::WlShm =
-        globals.bind(&qh, 1..=1, ()).unwrap();
+    let shm: wl_shm::WlShm = globals.bind(&qh, 1..=1, ()).unwrap();
 
-    let layer_shell: ZwlrLayerShellV1 =
-        globals.bind(&qh, 1..=4, ()).unwrap();
+    let layer_shell: ZwlrLayerShellV1 = globals.bind(&qh, 1..=4, ()).unwrap();
 
     let surface = compositor.create_surface(&qh, ());
     let layer_surface = layer_shell.get_layer_surface(
@@ -131,13 +175,7 @@ pub fn run_connector() {
     let size = stride * state.height;
     let name = CString::new("bar-buffer").unwrap();
 
-    let memfd = unsafe {
-        libc::syscall(
-            libc::SYS_memfd_create,
-            name.as_ptr(),
-            0,
-        ) as i32
-    };
+    let memfd = unsafe { libc::syscall(libc::SYS_memfd_create, name.as_ptr(), 0) as i32 };
     assert!(memfd >= 0);
 
     unsafe {
@@ -176,25 +214,23 @@ pub fn run_connector() {
             state.width,
             state.height,
             stride,
-        ).unwrap()
+        )
+        .unwrap()
     };
 
     let cr = Context::new(&cairo_surface).unwrap();
-    label::rounded_rect(&cr, 5.0, 0.0, (state.width - 10) as f64, (state.height) as f64, 8.0);
+    label_drawer::rounded_rect(
+        &cr,
+        5.0,
+        0.0,
+        (state.width - 10) as f64,
+        (state.height - 2) as f64,
+        8.0,
+    );
     let (red, green, blue, alpha) = BACKGROUND_COLOR;
     cr.set_source_rgba(red, green, blue, alpha);
     cr.fill().unwrap();
-
-    // cr.set_source_rgb(0.0, 1.0, 0.0);
-    // cr.select_font_face(
-    //     "Sans",
-    //     cairo::FontSlant::Normal,
-    //     cairo::FontWeight::Bold,
-    // );
-    // cr.move_to(20.0, 24.0);
-    // cr.set_font_size(14.0);
-    // cr.show_text("Hyprbar").unwrap();
-
+    img_drawer::draw_image(&cr, "arch.png", 21, 20, 20.0, 8.0);
     cairo_surface.flush();
 
     surface.attach(Some(&buffer), 0, 0);
