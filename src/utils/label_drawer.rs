@@ -30,7 +30,6 @@ pub fn add_label(cr: &cairo::Context, text: &str, x: f64, y: f64, color: (f64 ,f
         cairo::FontWeight::Bold,
     );
     cr.set_font_size(TEXT_SIZE);    
-    cr.move_to(0.0, 0.0);
     cr.move_to(x, y);
     cr.show_text(text);
 }

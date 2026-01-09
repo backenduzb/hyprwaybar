@@ -1,7 +1,6 @@
 use crate::config::settings::BACKGROUND_COLOR;
 use crate::config::settings::BAR_HEIGHT;
 use crate::utils::label_drawer;
-use crate::utils::img_drawer;
 use image::{imageops::FilterType, GenericImageView};
 use std::ffi::CString;
 use std::os::fd::BorrowedFd;
@@ -27,7 +26,7 @@ use wayland_protocols_wlr::layer_shell::v1::client::{
 use cairo::{Context, Format, ImageSurface};
 
 #[derive(Default)]
-struct State {
+pub struct State {
     configured: bool,
     width: i32,
     height: i32,
@@ -140,7 +139,10 @@ impl Dispatch<ZwlrLayerSurfaceV1, ()> for State {
     }
 }
 
-pub fn run_connector() {
+pub fn run_connector <F>(mut render: F)
+where
+    F: FnMut(&Context, &State),
+{
     let conn = Connection::connect_to_env().unwrap();
     let (globals, mut event_queue) = registry_queue_init::<State>(&conn).unwrap();
     let qh = event_queue.handle();
@@ -230,9 +232,8 @@ pub fn run_connector() {
     let (red, green, blue, alpha) = BACKGROUND_COLOR;
     cr.set_source_rgba(red, green, blue, alpha);
     cr.fill().unwrap();
-    img_drawer::draw_image(&cr, "arch.png", 21, 20, 20.0, 7.0);
+    render(&cr, &state);
     cairo_surface.flush();
-    label_drawer::add_label(&cr, "Arch", 46.0, 23.0, (1.0,1.0,1.0));
     surface.attach(Some(&buffer), 0, 0);
     surface.commit();
 
