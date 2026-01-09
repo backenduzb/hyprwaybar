@@ -26,7 +26,7 @@ pub fn draw_image(cr: &Context, image_name: &str, width: u32, height: u32, x: f6
         (4 * w) as i32,
     )
     .unwrap();
-
+    
     cr.set_source_surface(&img_surface, x, y);
     cr.paint();
 }

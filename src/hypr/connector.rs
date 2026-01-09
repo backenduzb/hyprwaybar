@@ -230,9 +230,9 @@ pub fn run_connector() {
     let (red, green, blue, alpha) = BACKGROUND_COLOR;
     cr.set_source_rgba(red, green, blue, alpha);
     cr.fill().unwrap();
-    img_drawer::draw_image(&cr, "arch.png", 21, 20, 20.0, 8.0);
+    img_drawer::draw_image(&cr, "arch.png", 21, 20, 20.0, 7.0);
     cairo_surface.flush();
-
+    label_drawer::add_label(&cr, "Arch", 46.0, 23.0, (1.0,1.0,1.0));
     surface.attach(Some(&buffer), 0, 0);
     surface.commit();
 
