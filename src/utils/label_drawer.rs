@@ -21,15 +21,20 @@ pub fn rounded_rect(cr: &cairo::Context, x: f64, y: f64, w: f64, h: f64, r: f64)
     cr.close_path();
 }
 
-pub fn add_label(cr: &cairo::Context, text: &str, x: f64, y: f64, color: (f64 ,f64 ,f64)){
+pub fn add_label(cr: &cairo::Context, text: &str, x: f64, y: f64, color: (f64, f64, f64), this_bold: bool) {
     let (r, g, b) = color;
     cr.set_source_rgb(r, g, b);
+
     cr.select_font_face(
-        "Sans",
+        "SF Pro Text",
         cairo::FontSlant::Normal,
-        cairo::FontWeight::Bold,
+        if this_bold { cairo::FontWeight::Bold } else { cairo::FontWeight::Normal },
     );
-    cr.set_font_size(TEXT_SIZE);    
-    cr.move_to(x, y);
+    cr.set_font_size(TEXT_SIZE);
+
+    let extents = cr.font_extents().unwrap();
+    let baseline = y + extents.ascent();
+    
+    cr.move_to(x, baseline);
     cr.show_text(text);
 }

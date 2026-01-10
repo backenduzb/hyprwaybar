@@ -4,6 +4,7 @@ use crate::utils::label_drawer;
 use image::{imageops::FilterType, GenericImageView};
 use std::ffi::CString;
 use std::os::fd::BorrowedFd;
+use std::time::{Duration, Instant};
 use wayland_client::protocol::wl_shm_pool;
 
 use std::{
@@ -139,7 +140,7 @@ impl Dispatch<ZwlrLayerSurfaceV1, ()> for State {
     }
 }
 
-pub fn run_connector <F>(mut render: F)
+pub fn run_connector<F>(mut render: F)
 where
     F: FnMut(&Context, &State),
 {
@@ -236,8 +237,33 @@ where
     cairo_surface.flush();
     surface.attach(Some(&buffer), 0, 0);
     surface.commit();
+    let mut last_updated = Instant::now();
 
     loop {
         event_queue.blocking_dispatch(&mut state).unwrap();
+
+        if last_updated.elapsed() >= Duration::from_secs(1) {
+            unsafe {
+                libc::memset(data as *mut _, 0, size as usize);
+            }
+
+            let cr = Context::new(&cairo_surface).unwrap();
+
+            label_drawer::rounded_rect(
+                &cr,
+                5.0,
+                0.0,
+                (state.width - 10) as f64,
+                (state.height - 2) as f64,
+                8.0,
+            );
+            render(&cr, &state);
+
+            cairo_surface.flush();
+            surface.attach(Some(&buffer), 0, 0);
+            surface.commit();
+
+            last_updated = Instant::now();
+        }
     }
 }
